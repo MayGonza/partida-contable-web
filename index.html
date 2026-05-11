@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Partida Contable</title>
+  <title>Partida Contable - ENAG</title>
 
   <style>
     body {
@@ -13,6 +13,8 @@
     }
 
     .card {
+      max-width: 900px;
+      margin: 0 auto;
       background: white;
       border-radius: 8px;
       padding: 20px;
@@ -36,6 +38,8 @@
     .row label {
       font-weight: 600;
       font-size: 14px;
+      display: block;
+      margin-bottom: 5px;
     }
 
     .row input {
@@ -43,6 +47,7 @@
       border: 1px solid #ccc;
       border-radius: 4px;
       width: 100%;
+      box-sizing: border-box;
     }
 
     table {
@@ -65,40 +70,25 @@
       vertical-align: top;
     }
 
-    td input {
+    td input, td textarea {
       width: 100%;
       border: none;
       padding: 6px;
       font-size: 13px;
       background: transparent;
-      white-space: normal;
-      word-break: break-word;
-      overflow-wrap: anywhere;
+      box-sizing: border-box;
+      font-family: inherit;
     }
 
-    td input:focus {
+    td input:focus, td textarea:focus {
       outline: none;
       background: #f0f8ff;
     }
 
-    td textarea{
-      width:100%;
-      border:none;
-      padding:6px;
-      font-size:13px;
-      background:transparent;
-      resize:none;
-      overflow:hidden;
-      line-height:1.2;
-      white-space:pre-wrap;
-      word-break:break-word;
-      overflow-wrap:anywhere;
-      font-family:inherit;
-    }
-
-    td textarea:focus{
-      outline:none;
-      background:#f0f8ff;
+    td textarea {
+      resize: none;
+      overflow: hidden;
+      display: block;
     }
 
     tfoot td {
@@ -131,25 +121,14 @@
     .ok { color: green; }
     .error { color: red; }
 
-    .taxbox{
-      display:flex;
-      gap:12px;
-      align-items:center;
-      flex-wrap:wrap;
-      padding:6px 10px;
-      border:1px solid #e5e7eb;
-      border-radius:6px;
-      background:#fbfdff;
-    }
-
-    .taxbox label{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      font-size:14px;
-      font-weight:600;
-      user-select:none;
-      cursor:pointer;
+    .taxbox {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 6px 10px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      background: #fbfdff;
     }
   </style>
 </head>
@@ -158,21 +137,18 @@
   <div class="card">
     <h2>PARTIDA CONTABLE</h2>
 
-    <!-- ✅ ENCABEZADO (como tu original) -->
     <div class="row">
       <div style="flex:1">
         <label>Fecha</label>
         <input type="date" id="fecha">
       </div>
-
       <div style="flex:2">
         <label>PARTIDA N°</label>
         <input type="text" id="numPartida" placeholder="Ej: 001-2026">
       </div>
-
       <div style="flex:3">
-        <label>Descripción</label>
-        <input type="text" id="concepto" placeholder="Descripción general de la partida">
+        <label>Descripción General</label>
+        <input type="text" id="concepto" placeholder="Glosa de la partida">
       </div>
     </div>
 
@@ -185,10 +161,7 @@
           <th style="width:20%">Haber (L)</th>
         </tr>
       </thead>
-
       <tbody id="detalle"></tbody>
-
-      <!-- ✅ Totales al final de la tabla -->
       <tfoot>
         <tr>
           <td></td>
@@ -209,23 +182,20 @@
       <button id="btnPDF">📄 Exportar PDF</button>
       <button id="btnLimpiar">🧹 Limpiar</button>
 
-      <!-- ✅ 3 checkbox (solo 1 activo a la vez) -->
-      <div class="taxbox" title="Selecciona un tipo de impuesto">
+      <div class="taxbox">
         <label><input type="checkbox" id="tax15"> ISV 15%</label>
         <label><input type="checkbox" id="tax18"> ISR 12.5%</label>
-        <label><input type="checkbox" id="taxExento"> 3- Exento</label>
+        <label><input type="checkbox" id="taxExento"> Exento</label>
       </div>
     </div>
   </div>
 
-  <!-- jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
   <script>
     window.addEventListener("DOMContentLoaded", () => {
       const detalle = document.getElementById("detalle");
-
       const tdTotalDebe = document.getElementById("tdTotalDebe");
       const tdTotalHaber = document.getElementById("tdTotalHaber");
       const tdEstado = document.getElementById("tdEstado");
@@ -235,10 +205,6 @@
       const btnBold = document.getElementById("btnBold");
       const btnUnderline = document.getElementById("btnUnderline");
       const btnLimpiar = document.getElementById("btnLimpiar");
-
-      const numPartida = document.getElementById("numPartida");
-      const fecha = document.getElementById("fecha");
-      const concepto = document.getElementById("concepto");
 
       const tax15 = document.getElementById("tax15");
       const tax18 = document.getElementById("tax18");
@@ -252,17 +218,18 @@
 
       let inputActivo = null;
 
+      // CONFIGURACIÓN DE LOGO E IMPUESTOS
       const CUENTA_IMP = "-27110";
       const DESC_IMP = "IMPUESTO S/V";
-      const DESC_IMP_SR = "IMPUESTO S/R"; // ✅ (ÚNICO CAMBIO) texto para ISR 12.5%
-      const LOGO_URL = "logo.png";
+      const DESC_IMP_SR = "IMPUESTO S/R";
+      const LOGO_URL = "logo.png"; 
 
-      function autoGrowTextarea(ta){
+      function autoGrowTextarea(ta) {
         ta.style.height = "auto";
         ta.style.height = (ta.scrollHeight) + "px";
       }
 
-      function attachEvents(tr){
+      function attachEvents(tr) {
         tr.querySelectorAll("input, textarea").forEach(inp => {
           inp.addEventListener("input", () => {
             if (inp.tagName === "TEXTAREA") autoGrowTextarea(inp);
@@ -282,120 +249,41 @@
         `;
         attachEvents(tr);
         detalle.appendChild(tr);
-
         autoGrowTextarea(tr.cells[1].querySelector("textarea"));
         calcular();
       }
 
-      function setSoloUno(chk){
-        [tax15, tax18, taxExento].forEach(x => { if (x !== chk) x.checked = false; });
-      }
-
-      function getTasa(){
-        if (tax15.checked) return 0.15;
-        if (tax18.checked) return 0.125;
-        if (taxExento.checked) return 0;
-        return null;
-      }
-
-      function findImpuestoRow(){
-        return [...detalle.rows].find(r => {
-          const c = r.cells[0].querySelector("input");
-          return (c.value || "").trim() === CUENTA_IMP;
-        }) || null;
-      }
-
-      function removeImpuestoRow(){
-        const r = findImpuestoRow();
-        if (r) r.remove();
-      }
-
-      function ensureImpuestoRow(){
-        let r = findImpuestoRow();
-        if (!r){
-          r = document.createElement("tr");
-          r.innerHTML = `
-            <td><input></td>
-            <td><textarea rows="1"></textarea></td>
-            <td><input type="number" step="0.01"></td>
-            <td><input type="number" step="0.01"></td>
-          `;
-          attachEvents(r);
-          detalle.appendChild(r);
-        }
-
-        const inCuenta = r.cells[0].querySelector("input");
-        const inDesc   = r.cells[1].querySelector("textarea");
-        const inDebe   = r.cells[2].querySelector("input");
-        const inHaber  = r.cells[3].querySelector("input");
-
-        inCuenta.value = CUENTA_IMP;
-        inCuenta.readOnly = true;
-
-        inDesc.value = DESC_IMP;  // (se mantiene, luego lo personalizamos según checkbox)
-        inDesc.readOnly = true;
-
-        inDebe.value = "";
-        inDebe.readOnly = true;
-
-        // Haber calculado automático
-        inHaber.readOnly = true;
-
-        // estilos pedidos
-        inDesc.style.fontWeight = "bold";
-        inDesc.style.textDecoration = "underline";
-        inDesc.style.textAlign = "center";
-
-        inCuenta.style.textAlign = "center";
-        inCuenta.style.fontWeight = "bold";
-        inDebe.style.textAlign = "right";
-        inHaber.style.textAlign = "right";
-
-        autoGrowTextarea(inDesc);
-        return r;
-      }
-
-      // ✅ BASE: PRIMERA FILA, COLUMNA DEBE (valor exacto, no suma)
-      function getBasePrimeraFilaDebe(){
-        const row1 = detalle.rows[0]; // 1ra fila (índice 0)
-        if (!row1) return 0;
-        const inpDebe = row1.cells[2].querySelector('input[type="number"]');
-        return parseFloat(inpDebe?.value) || 0;
-      }
-
-      function calcularImpuesto(){
-        const tasa = getTasa();
-
-        // ninguno seleccionado o exento => no fila
-        if (tasa === null || tasa === 0){
-          removeImpuestoRow();
-          return;
-        }
-
-        const base = getBasePrimeraFilaDebe(); // ✅ SOLO DEBE FILA 1
-        const impuesto = base * tasa;
-
-        const rImp = ensureImpuestoRow();
-
-        // ✅ (ÚNICO CAMBIO) Personalizar el mensaje según el checkbox
-        const inDesc = rImp.cells[1].querySelector("textarea");
-        if (tax15.checked) inDesc.value = DESC_IMP;       // IMPUESTO S/V
-        else if (tax18.checked) inDesc.value = DESC_IMP_SR; // IMPUESTO S/R
-
-        rImp.cells[3].querySelector('input[type="number"]').value =
-          (Math.round(impuesto * 100) / 100).toFixed(2);
-
-        autoGrowTextarea(inDesc);
-      }
-
       function calcular() {
-        // 1) impuesto
-        calcularImpuesto();
+        // Lógica de impuestos
+        const tasa = tax15.checked ? 0.15 : (tax18.checked ? 0.125 : 0);
+        const row1 = detalle.rows[0];
+        const baseDebe = row1 ? parseFloat(row1.cells[2].querySelector("input").value) || 0 : 0;
+        
+        let rImp = [...detalle.rows].find(r => r.cells[0].querySelector("input").value === CUENTA_IMP);
+        
+        if (tasa > 0 && baseDebe > 0) {
+          if (!rImp) {
+            rImp = document.createElement("tr");
+            rImp.innerHTML = `<td><input readonly></td><td><textarea readonly rows="1"></textarea></td><td><input readonly></td><td><input readonly></td>`;
+            attachEvents(rImp);
+            detalle.appendChild(rImp);
+          }
+          rImp.cells[0].querySelector("input").value = CUENTA_IMP;
+          rImp.cells[1].querySelector("textarea").value = tax15.checked ? DESC_IMP : DESC_IMP_SR;
+          rImp.cells[3].querySelector("input").value = (baseDebe * tasa).toFixed(2);
+          
+          // Estilo automático para la fila de impuesto
+          const txtImp = rImp.cells[1].querySelector("textarea");
+          txtImp.style.fontWeight = "bold";
+          txtImp.style.textDecoration = "underline";
+          txtImp.style.textAlign = "center";
+          autoGrowTextarea(txtImp);
+        } else if (rImp) {
+          rImp.remove();
+        }
 
-        // 2) totales
-        let totalDebe = 0;
-        let totalHaber = 0;
-
+        // Cálculo de totales
+        let totalDebe = 0, totalHaber = 0;
         [...detalle.rows].forEach(row => {
           totalDebe += parseFloat(row.cells[2].querySelector("input").value) || 0;
           totalHaber += parseFloat(row.cells[3].querySelector("input").value) || 0;
@@ -403,239 +291,94 @@
 
         tdTotalDebe.textContent = formatoMoneda.format(totalDebe);
         tdTotalHaber.textContent = formatoMoneda.format(totalHaber);
-
-        const balanceada = (totalDebe === totalHaber && totalDebe > 0);
-        tdEstado.innerHTML = balanceada
-          ? `Estado: <span class="ok">✔ BALANCEADA</span>`
-          : `Estado: <span class="error">✘ DESCUADRADA</span>`;
+        const bal = (totalDebe.toFixed(2) === totalHaber.toFixed(2) && totalDebe > 0);
+        tdEstado.innerHTML = bal ? `<span class="ok">✔ BALANCEADA</span>` : `<span class="error">✘ DESCUADRADA</span>`;
       }
 
-      btnAgregar.addEventListener("click", agregarFila);
-
-      btnBold.addEventListener("click", () => {
-        if (!inputActivo) return;
-        inputActivo.style.fontWeight = inputActivo.style.fontWeight === "bold" ? "normal" : "bold";
-      });
-
-      btnUnderline.addEventListener("click", () => {
-        if (!inputActivo) return;
-        inputActivo.style.textDecoration = inputActivo.style.textDecoration === "underline" ? "none" : "underline";
-      });
-
-      btnLimpiar.addEventListener("click", () => {
-        detalle.innerHTML = "";
-        agregarFila(); agregarFila(); agregarFila();
-        tax15.checked = tax18.checked = taxExento.checked = false;
-        calcular();
-      });
-
+      // Manejo de Checkboxes (Solo uno activo)
       [tax15, tax18, taxExento].forEach(chk => {
         chk.addEventListener("change", () => {
-          if (chk.checked) setSoloUno(chk);
+          if (chk.checked) [tax15, tax18, taxExento].forEach(x => { if (x !== chk) x.checked = false; });
           calcular();
         });
       });
 
-      // PDF (con logo + encabezado + firmas + subrayado)
+      btnBold.addEventListener("click", () => { if(inputActivo) inputActivo.style.fontWeight = inputActivo.style.fontWeight === "bold" ? "normal" : "bold"; });
+      btnUnderline.addEventListener("click", () => { if(inputActivo) inputActivo.style.textDecoration = inputActivo.style.textDecoration === "underline" ? "none" : "underline"; });
+      btnAgregar.addEventListener("click", agregarFila);
+      btnLimpiar.addEventListener("click", () => { location.reload(); });
+
+      // EXPORTACIÓN PDF
       btnPDF.addEventListener("click", () => {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'mm', 'a4');
         const pageWidth = doc.internal.pageSize.width;
-
-        // asegurar que el impuesto esté actualizado antes de imprimir
-        calcular();
-
-        // totales reales
-        let totalDebe = 0, totalHaber = 0;
-        [...detalle.rows].forEach(row => {
-          totalDebe += parseFloat(row.cells[2].querySelector("input").value) || 0;
-          totalHaber += parseFloat(row.cells[3].querySelector("input").value) || 0;
-        });
-        const balanceada = (totalDebe === totalHaber && totalDebe > 0);
-        const estadoTxt = balanceada ? "BALANCEADA" : "DESCUADRADA";
-
+        
         const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.src = "logo.png";
-
-        img.onload = function () {
-          // Logo
-          const logoWidth = 30;
+        img.src = LOGO_URL;
+        img.onload = function() {
+          // 1. Logo Centrado
+          const logoWidth = 45;
           const logoHeight = (img.height / img.width) * logoWidth;
-          doc.addImage(img, 'PNG', 14, 10, logoWidth, logoHeight);
+          const xCentro = (pageWidth - logoWidth) / 2;
+          doc.addImage(img, 'PNG', xCentro, 10, logoWidth, logoHeight);
 
-          // Título
+          // 2. Título dinámico según tamaño del logo
+          const yTitulo = 10 + logoHeight + 10;
           doc.setFontSize(18);
           doc.setFont(undefined, 'bold');
-          doc.text("PARTIDA CONTABLE", pageWidth / 2, 20, { align: "center" });
+          doc.text("PARTIDA CONTABLE", pageWidth / 2, yTitulo, { align: "center" });
 
-          // Encabezado info
-          doc.setFontSize(12);
+          // 3. Encabezado de información
+          const yInfo = yTitulo + 12;
+          doc.setFontSize(11);
           doc.setFont(undefined, 'normal');
-          doc.text(`PDA N°: ${numPartida.value || "________"}`, 45, 28);
-          doc.text(`Fecha: ${fecha.value || "________"}`, 45, 34);
-          doc.text(`Descripción: ${concepto.value || ""}`, 45, 40);
+          doc.text(`PDA N°: ${document.getElementById("numPartida").value || "________"}`, 14, yInfo);
+          doc.text(`Fecha: ${document.getElementById("fecha").value || "________"}`, 14, yInfo + 7);
+          doc.text(`Descripción: ${document.getElementById("concepto").value || ""}`, 14, yInfo + 14);
 
-          const headers = [["Cuenta", "Descripción", "Debe (L)", "Haber (L)"]];
-
+          // 4. Tabla
           const bodyData = [...detalle.rows].map(row => {
-            const cuenta = row.cells[0].querySelector("input");
-            const desc = row.cells[1].querySelector("textarea");
-            const debe = row.cells[2].querySelector("input");
-            const haber = row.cells[3].querySelector("input");
-
-            const inputs = [cuenta, desc, debe, haber];
-
-            return inputs.map(inp => {
-              const isNum = inp.type === "number";
-              const rawVal = inp.value || (isNum ? 0 : "");
-              const value = isNum ? formatoMoneda.format(rawVal || 0) : rawVal;
-
-              const bold = inp.style.fontWeight === "bold";
-              const underline = inp.style.textDecoration === "underline";
-              const align = inp.style.textAlign || (isNum ? "right" : "left");
-
+            return [...row.cells].map(td => {
+              const el = td.querySelector("input, textarea");
               return {
-                content: value,
-                styles: { fontStyle: bold ? "bold" : "normal", halign: align },
-                _underline: underline
+                content: el.type === "number" ? formatoMoneda.format(el.value || 0) : el.value,
+                styles: { 
+                  fontStyle: el.style.fontWeight === "bold" ? "bold" : "normal",
+                  halign: el.style.textAlign || (el.type === "number" ? "right" : "left")
+                },
+                _underline: el.style.textDecoration === "underline"
               };
             });
           });
 
-          const foot = [
-            ["", "TOTALES", formatoMoneda.format(totalDebe), formatoMoneda.format(totalHaber)],
-            [{ content: `Estado: ${estadoTxt}`, colSpan: 4, styles: { fontStyle: "bold", halign: "right" } }]
-          ];
-
           doc.autoTable({
-            head: headers,
+            startY: yInfo + 22,
+            head: [["Cuenta", "Descripción", "Debe (L)", "Haber (L)"]],
             body: bodyData,
-            foot: foot,
-            startY: 46,
-            theme: "grid",
-            headStyles: { fillColor: [44, 62, 80], textColor: 255, fontStyle: "bold" },
-            footStyles: { fillColor: [248, 250, 252], textColor: 20, fontStyle: "bold" },
-            styles: { fontSize: 11, cellWidth: "wrap" },
-
-            // Subrayado manual (porque AutoTable no lo soporta directo)
-            didDrawCell: function (hookData) {
-              if (hookData.section !== "body") return;
-              const raw = hookData.cell && hookData.cell.raw;
-              if (!raw || !raw._underline) return;
-
-              const cell = hookData.cell;
-              const padLeft = typeof cell.padding === "function" ? cell.padding("left") : 2;
-              const padRight = typeof cell.padding === "function" ? cell.padding("right") : 2;
-
-              const x1 = cell.x + padLeft;
-              const x2 = cell.x + cell.width - padRight;
-              const y = cell.y + cell.height - 2;
-
-              hookData.doc.line(x1, y, x2, y);
-            },
-
-            // ✅ Firmas (como tu original)
-            didDrawPage: function () {
-              const pageHeight = doc.internal.pageSize.height;
-              const y = pageHeight - 25;
-              doc.setFontSize(12);
-              doc.text("__________________________", 20, y);
-              doc.text("__________________________", 120, y);
-              doc.text("Firma Administrador", 25, y + 6);
-              doc.text("Firma Contabilidad", 125, y + 6);
+            theme: 'grid',
+            headStyles: { fillColor: [44, 62, 80] },
+            didDrawCell: (data) => {
+              if (data.section === 'body' && data.cell.raw._underline) {
+                doc.line(data.cell.x + 2, data.cell.y + data.cell.height - 2, data.cell.x + data.cell.width - 2, data.cell.y + data.cell.height - 2);
+              }
             }
           });
 
-          doc.save("Partida_Contable_ENAG.pdf");
+          // Firmas al final
+          const finalY = doc.lastAutoTable.finalY + 30;
+          doc.text("__________________________", 20, finalY);
+          doc.text("__________________________", 120, finalY);
+          doc.text("Firma Administrador", 30, finalY + 7);
+          doc.text("Firma Contabilidad", 130, finalY + 7);
+
+          doc.save("Partida_Contable.pdf");
         };
-
-        // Si el logo falla por CORS, igual generamos PDF sin logo (pero sin romper)
-        img.onerror = function(){
-          doc.setFontSize(18);
-          doc.setFont(undefined, 'bold');
-          doc.text("PARTIDA CONTABLE", pageWidth / 2, 20, { align: "center" });
-
-          doc.setFontSize(12);
-          doc.setFont(undefined, 'normal');
-          doc.text(`PDA N°: ${numPartida.value || "________"}`, 14, 30);
-          doc.text(`Fecha: ${fecha.value || "________"}`, 14, 36);
-          doc.text(`Descripción: ${concepto.value || ""}`, 14, 42);
-
-          const headers = [["Cuenta", "Descripción", "Debe (L)", "Haber (L)"]];
-
-          const bodyData = [...detalle.rows].map(row => {
-            const cuenta = row.cells[0].querySelector("input");
-            const desc = row.cells[1].querySelector("textarea");
-            const debe = row.cells[2].querySelector("input");
-            const haber = row.cells[3].querySelector("input");
-            const inputs = [cuenta, desc, debe, haber];
-
-            return inputs.map(inp => {
-              const isNum = inp.type === "number";
-              const rawVal = inp.value || (isNum ? 0 : "");
-              const value = isNum ? formatoMoneda.format(rawVal || 0) : rawVal;
-
-              const bold = inp.style.fontWeight === "bold";
-              const underline = inp.style.textDecoration === "underline";
-              const align = inp.style.textAlign || (isNum ? "right" : "left");
-
-              return { content: value, styles: { fontStyle: bold ? "bold" : "normal", halign: align }, _underline: underline };
-            });
-          });
-
-          let totalDebe = 0, totalHaber = 0;
-          [...detalle.rows].forEach(row => {
-            totalDebe += parseFloat(row.cells[2].querySelector("input").value) || 0;
-            totalHaber += parseFloat(row.cells[3].querySelector("input").value) || 0;
-          });
-          const balanceada = (totalDebe === totalHaber && totalDebe > 0);
-          const estadoTxt = balanceada ? "BALANCEADA" : "DESCUADRADA";
-
-          const foot = [
-            ["", "TOTALES", formatoMoneda.format(totalDebe), formatoMoneda.format(totalHaber)],
-            [{ content: `Estado: ${estadoTxt}`, colSpan: 4, styles: { fontStyle: "bold", halign: "right" } }]
-          ];
-
-          doc.autoTable({
-            head: headers,
-            body: bodyData,
-            foot: foot,
-            startY: 50,
-            theme: "grid",
-            headStyles: { fillColor: [44, 62, 80], textColor: 255, fontStyle: "bold" },
-            footStyles: { fillColor: [248, 250, 252], textColor: 20, fontStyle: "bold" },
-            styles: { fontSize: 11, cellWidth: "wrap" },
-            didDrawCell: function (hookData) {
-              if (hookData.section !== "body") return;
-              const raw = hookData.cell && hookData.cell.raw;
-              if (!raw || !raw._underline) return;
-              const cell = hookData.cell;
-              const x1 = cell.x + 2;
-              const x2 = cell.x + cell.width - 2;
-              const y = cell.y + cell.height - 2;
-              hookData.doc.line(x1, y, x2, y);
-            },
-            didDrawPage: function () {
-              const pageHeight = doc.internal.pageSize.height;
-              const y = pageHeight - 25;
-              doc.setFontSize(12);
-              doc.text("__________________________", 20, y);
-              doc.text("__________________________", 120, y);
-              doc.text("Firma Administrador", 25, y + 6);
-              doc.text("Firma Contabilidad", 125, y + 6);
-            }
-          });
-
-          doc.save("Partida_Contable_ENAG.pdf");
-        };
+        img.onerror = () => alert("Error: No se encontró el archivo logo.png en la carpeta.");
       });
 
-      // Filas iniciales
-      agregarFila();
-      agregarFila();
-      agregarFila();
-      calcular();
+      // Filas por defecto
+      for(let i=0; i<3; i++) agregarFila();
     });
   </script>
 </body>
