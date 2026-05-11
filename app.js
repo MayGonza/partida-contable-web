@@ -1,0 +1,74 @@
+const express = require("express");
+const cors = require("cors");
+const db = require("./db");
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+app.post("/partidas", async (req, res) => {
+  const { fecha, concepto, detalles, usuario } = req.body;
+
+  let totalDebe = 0;
+  let totalHaber = 0;
+
+  detalles.forEach(d => {
+    totalDebe += Number(d.debe || 0);
+    totalHaber += Number(d.haber || 0);
+  });
+
+  if (totalDebe !== totalHaber) {
+    return res.status(400).json({ error: "Partida descuadrada" });
+  }
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [num] = await conn.query(
+      "SELECT ultimo_numero FROM numerador_partidas FOR UPDATE"
+    );
+
+    const nuevoNumero = num[0].ultimo_numero + 1;
+
+    await conn.query(
+      "UPDATE numerador_partidas SET ultimo_numero = ?",
+      [nuevoNumero]
+    );
+
+    const [partida] = await conn.query(
+      `INSERT INTO partidas 
+       (numero, fecha, concepto, total_debe, total_haber, creado_por)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [nuevoNumero, fecha, concepto, totalDebe, totalHaber, usuario]
+    );
+
+    for (let d of detalles) {
+      await conn.query(
+        `INSERT INTO partida_detalle
+         (id_partida, cuenta, descripcion, debe, haber)
+         VALUES (?, ?, ?, ?, ?)`,
+        [partida.insertId, d.cuenta, d.descripcion, d.debe, d.haber]
+      );
+    }
+
+    await conn.query(
+      `INSERT INTO bitacora (id_usuario, accion, descripcion)
+       VALUES (?, 'CREAR PARTIDA', ?)`,
+      [usuario, `Partida #${nuevoNumero} creada`]
+    );
+
+    await conn.commit();
+    res.json({ mensaje: "Partida guardada", numero: nuevoNumero });
+
+  } catch (e) {
+    await conn.rollback();
+    res.status(500).json({ error: e.message });
+  } finally {
+    conn.release();
+  }
+});
+
+app.listen(3000, () => {
+  console.log("API contable activa en puerto 3000");
+});
