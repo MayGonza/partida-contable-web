@@ -318,7 +318,7 @@
         img.src = LOGO_URL;
         img.onload = function() {
           // 1. Logo Centrado
-          const logoWidth = 80;
+          const logoWidth = 120;
           const logoHeight = (img.height / img.width) * logoWidth;
           const xCentro = (pageWidth - logoWidth) / 2;
           doc.addImage(img, 'PNG', xCentro, 10, logoWidth, logoHeight);
